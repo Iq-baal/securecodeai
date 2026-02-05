@@ -1,0 +1,64 @@
+{
+  "name": "securecode-ai",
+  "displayName": "SecureCode AI",
+  "description": "AI-powered security auditing and auto-fixer",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Machine Learning",
+    "Linters"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "securecode-ai.scanFile",
+        "title": "SecureCode AI: Scan Current File"
+      },
+      {
+        "command": "securecode-ai.scanWorkspace",
+        "title": "SecureCode AI: Scan Workspace"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "secure-code-sidebar",
+          "title": "SecureCode AI",
+          "icon": "media/shield-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "secure-code-sidebar": [
+        {
+          "id": "secure-code-view",
+          "name": "Vulnerability Scanner"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "18.x",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.45.0",
+    "typescript": "^5.1.6"
+  },
+  "dependencies": {
+    "@google/genai": "^0.0.1" 
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "SecureCode AI",
+  "description": "A public AI security auditing platform to detect vulnerabilities and generate safe fixes instantly.",
+  "requestFramePermissions": []
+}
