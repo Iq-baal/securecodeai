@@ -6,6 +6,7 @@ import ScanLoader from './components/ScanLoader';
 import SecurityReport from './components/SecurityReport';
 import SecureExamplesLibrary from './components/SecureExamplesLibrary';
 import ScanHistory from './components/ScanHistory';
+import SystemStatus from './components/SystemStatus';
 import { 
   Shield, 
   Code2, 
@@ -56,8 +57,11 @@ function App() {
     setScanResult(null);
 
     try {
-      // Using gemini-3-pro-preview via service
-      const result = await scanCodeWithGemini(code, fileName);
+      // Using enhanced gemini service with production features
+      const result = await scanCodeWithGemini(code, fileName, {
+        clientId: 'web-user', // You can implement user identification later
+        skipCache: false
+      });
       
       // Add a unique ID and save to history
       const resultWithId = {
@@ -68,7 +72,38 @@ function App() {
       saveScan(resultWithId);
       setScanResult(resultWithId);
     } catch (err: any) {
-      setError(err.message || "An unexpected error occurred during the scan.");
+      console.error("Scan error:", err);
+      
+      // Handle specific error types from enhanced service
+      if (err.name === 'SecurityAuditError') {
+        switch (err.code) {
+          case 'MISSING_API_KEY':
+            setError("API key not configured. Please set GEMINI_API_KEY in your .env.local file.");
+            break;
+          case 'EMPTY_CODE':
+            setError("Please provide code to scan.");
+            break;
+          case 'CODE_TOO_LARGE':
+            setError(`Code is too large (${err.details?.size} chars). Maximum allowed: ${err.details?.limit} characters.`);
+            break;
+          case 'RATE_LIMIT_EXCEEDED':
+            setError(`Rate limit exceeded. Please wait before making another request. (Limit: ${err.details?.limit} requests per ${err.details?.window})`);
+            break;
+          case 'TIMEOUT':
+            setError("Analysis timed out. Please try with a smaller code file or try again later.");
+            break;
+          case 'API_RATE_LIMIT':
+            setError("Gemini API rate limit exceeded. Please try again in a few minutes.");
+            break;
+          case 'INVALID_API_KEY':
+            setError("Invalid API key. Please check your GEMINI_API_KEY configuration.");
+            break;
+          default:
+            setError(err.message || "An unexpected error occurred during the scan.");
+        }
+      } else {
+        setError(err.message || "An unexpected error occurred during the scan.");
+      }
     } finally {
       setIsScanning(false);
     }
@@ -281,6 +316,9 @@ function App() {
           </div>
         </div>
       </footer>
+
+      {/* System Status Component */}
+      <SystemStatus />
     </div>
   );
 }
