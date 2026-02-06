@@ -7,21 +7,24 @@ const SystemStatus: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    // Refresh stats every few seconds so the numbers stay current
     const updateStats = () => {
       try {
         const auditStats = getAuditStats();
         setStats(auditStats);
       } catch (error) {
+        // Stats failing isn't critical, just log and move on
         console.error('Failed to get audit stats:', error);
       }
     };
 
     updateStats();
-    const interval = setInterval(updateStats, 5000); // Update every 5 seconds
+    const interval = setInterval(updateStats, 5000); // 5 second refresh
 
-    return () => clearInterval(interval);
+    return () => clearInterval(interval); // Cleanup on unmount
   }, []);
 
+  // Hidden by default - most users don't care about internal metrics
   if (!isVisible) {
     return (
       <button

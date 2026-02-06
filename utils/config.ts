@@ -1,4 +1,5 @@
-// Configuration validation and environment setup
+// Config validation for when things inevitably break at 3am
+// Vite uses import.meta.env, not process.env - learned that the hard way
 
 export interface AppConfig {
   geminiApiKey: string;
@@ -13,15 +14,15 @@ export interface AppConfig {
 export const validateEnvironment = (): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
 
-  // Check for required environment variables
-  const geminiApiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+  // Vite needs VITE_ prefix or it won't work
+  const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
   if (!geminiApiKey) {
-    errors.push('GEMINI_API_KEY is required but not set in environment variables');
+    errors.push('VITE_GEMINI_API_KEY is required but not set in environment variables');
   }
 
-  // Validate API key format (basic check)
+  // Gemini keys start with "AI" - if yours doesn't, something's wrong
   if (geminiApiKey && !geminiApiKey.startsWith('AI')) {
-    errors.push('GEMINI_API_KEY appears to have invalid format (should start with "AI")');
+    errors.push('VITE_GEMINI_API_KEY appears to have invalid format (should start with "AI")');
   }
 
   return {
@@ -31,15 +32,15 @@ export const validateEnvironment = (): { isValid: boolean; errors: string[] } =>
 };
 
 export const getAppConfig = (): AppConfig => {
-  const environment = (process.env.NODE_ENV as any) || 'development';
+  const environment = (import.meta.env.MODE as any) || 'development';
   
   return {
-    geminiApiKey: process.env.API_KEY || process.env.GEMINI_API_KEY || '',
+    geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
     environment,
     features: {
-      caching: environment !== 'test',
-      rateLimit: environment === 'production',
-      analytics: environment === 'production'
+      caching: environment !== 'test', // Cache everything except tests
+      rateLimit: environment === 'production', // Only rate limit in prod to avoid annoying myself
+      analytics: environment === 'production' // Only track real users
     }
   };
 };
@@ -48,6 +49,7 @@ export const logConfigStatus = (): void => {
   const validation = validateEnvironment();
   const config = getAppConfig();
 
+  // Pretty console output so I know what's going on
   console.log('🔧 SecureCode AI Configuration Status:');
   console.log(`   Environment: ${config.environment}`);
   console.log(`   API Key: ${config.geminiApiKey ? '✅ Configured' : '❌ Missing'}`);

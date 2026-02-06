@@ -32,7 +32,7 @@ function App() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // File Upload Handler
+  // File Upload Handler - because users love uploading random stuff
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -41,11 +41,11 @@ function App() {
         setCode(event.target?.result as string);
         setFileName(file.name);
       };
-      reader.readAsText(file);
+      reader.readAsText(file); // Pray it's actually text and not a binary file
     }
   };
 
-  // Scan Trigger
+  // Scan Trigger - the main event where magic happens (or everything breaks)
   const handleScan = async () => {
     if (!code.trim()) {
       setError("Please provide code to scan.");
@@ -57,13 +57,13 @@ function App() {
     setScanResult(null);
 
     try {
-      // Using enhanced gemini service with production features
+      // Using enhanced gemini service with all the production bells and whistles
       const result = await scanCodeWithGemini(code, fileName, {
-        clientId: 'web-user', // You can implement user identification later
+        clientId: 'web-user', // TODO: implement actual user identification when we get fancy
         skipCache: false
       });
       
-      // Add a unique ID and save to history
+      // Add a unique ID because everything needs an ID these days
       const resultWithId = {
         ...result,
         id: `scan-${Date.now()}`
@@ -74,7 +74,7 @@ function App() {
     } catch (err: any) {
       console.error("Scan error:", err);
       
-      // Handle specific error types from enhanced service
+      // Handle all the different ways this can fail (there are many)
       if (err.name === 'SecurityAuditError') {
         switch (err.code) {
           case 'MISSING_API_KEY':
@@ -102,6 +102,7 @@ function App() {
             setError(err.message || "An unexpected error occurred during the scan.");
         }
       } else {
+        // Fallback for when weird stuff happens
         setError(err.message || "An unexpected error occurred during the scan.");
       }
     } finally {
@@ -111,20 +112,20 @@ function App() {
 
   const handleHistorySelect = (scan: ScanResult) => {
     setScanResult(scan);
-    setView('scanner');
+    setView('scanner'); // Jump back to scanner view because that's where the action is
   };
 
   const resetScanner = () => {
     setScanResult(null);
     setCode('');
-    setView('scanner');
+    setView('scanner'); // Back to the beginning, like nothing happened
   };
 
-  // Render Input Section
+  // Render Input Section - the main UI where users paste their questionable code
   const renderScanner = () => {
-    if (isScanning) return <ScanLoader />;
+    if (isScanning) return <ScanLoader />; // Show fancy loading animation
     
-    // If we have a result, show it
+    // If we have results, show them instead of the input form
     if (scanResult) return <SecurityReport result={scanResult} onReset={resetScanner} />;
 
     return (

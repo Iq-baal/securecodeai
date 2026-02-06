@@ -11,16 +11,19 @@ const ScanHistory: React.FC<Props> = ({ onSelectScan }) => {
   const [history, setHistory] = useState<ScanResult[]>([]);
 
   useEffect(() => {
+    // Load history on mount
     setHistory(getHistory());
   }, []);
 
   const handleClear = () => {
+    // Confirm before nuking everything - users click fast
     if (confirm('Are you sure you want to clear your scan history?')) {
       clearHistory();
       setHistory([]);
     }
   };
 
+  // Color code scores so they're easy to read at a glance
   const getScoreColor = (score: number) => {
     if (score >= 90) return 'text-cyber-accent';
     if (score >= 70) return 'text-cyber-warn';

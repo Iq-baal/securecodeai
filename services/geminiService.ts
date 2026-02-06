@@ -1,24 +1,26 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ScanResult, Severity, Vulnerability } from "../types";
 
-// Production-ready configuration
+// Okay future me, these are the magic numbers that keep this thing from exploding
 const CONFIG = {
-  MAX_CODE_SIZE: 50000, // 50KB limit
-  MAX_RETRIES: 3,
-  TIMEOUT_MS: 30000,
-  RATE_LIMIT_PER_MINUTE: 10,
-  CACHE_TTL_MS: 5 * 60 * 1000, // 5 minutes
+  MAX_CODE_SIZE: 50000, // 50KB because anything bigger and Gemini gets cranky
+  MAX_RETRIES: 3, // Three strikes and you're out, just like my patience
+  TIMEOUT_MS: 30000, // 30 seconds because I'm not waiting forever for AI to think
+  RATE_LIMIT_PER_MINUTE: 10, // 10 requests per minute so we don't bankrupt ourselves
+  CACHE_TTL_MS: 5 * 60 * 1000, // 5 minutes cache because I'm lazy and API calls cost money
 };
 
-// Rate limiting store
+// These are my global storage maps because I'm too lazy to set up Redis right now
+// TODO: Replace with actual database when this thing gets popular (if ever)
 const rateLimitStore = new Map<string, number[]>();
 const cacheStore = new Map<string, { result: ScanResult; timestamp: number }>();
 
+// Custom error class because JavaScript's default errors are about as helpful as a chocolate teapot
 class SecurityAuditError extends Error {
   constructor(
     message: string,
-    public code: string,
-    public details?: any
+    public code: string, // So I can actually figure out what went wrong at 3am
+    public details?: any // Extra context for when I'm debugging this mess later
   ) {
     super(message);
     this.name = 'SecurityAuditError';
@@ -26,10 +28,11 @@ class SecurityAuditError extends Error {
 }
 
 const getApiKey = (): string => {
-  const key = process.env.API_KEY || process.env.GEMINI_API_KEY;
+  // Vite needs VITE_ prefix or it won't expose the env var to the browser
+  const key = import.meta.env.VITE_GEMINI_API_KEY;
   if (!key) {
     throw new SecurityAuditError(
-      'Gemini API key not configured. Please set GEMINI_API_KEY in your .env.local file.',
+      'Gemini API key not configured. Please set VITE_GEMINI_API_KEY in your .env.local file.',
       'MISSING_API_KEY'
     );
   }
@@ -37,6 +40,7 @@ const getApiKey = (): string => {
 };
 
 const validateInput = (code: string, fileName: string): void => {
+  // Basic sanity checks because users will try to break everything
   if (!code || code.trim().length === 0) {
     throw new SecurityAuditError(
       'Code content cannot be empty',
@@ -44,6 +48,7 @@ const validateInput = (code: string, fileName: string): void => {
     );
   }
 
+  // Don't let people upload War and Peace as a JavaScript file
   if (code.length > CONFIG.MAX_CODE_SIZE) {
     throw new SecurityAuditError(
       `Code size exceeds limit of ${CONFIG.MAX_CODE_SIZE} characters`,
@@ -52,6 +57,7 @@ const validateInput = (code: string, fileName: string): void => {
     );
   }
 
+  // File name validation because apparently that's necessary
   if (!fileName || fileName.trim().length === 0) {
     throw new SecurityAuditError(
       'File name cannot be empty',
@@ -59,7 +65,7 @@ const validateInput = (code: string, fileName: string): void => {
     );
   }
 
-  // Check for potentially malicious content
+  // Look for obviously sketchy stuff (this won't catch everything but it's something)
   const suspiciousPatterns = [
     /eval\s*\(/gi,
     /document\.write\s*\(/gi,
@@ -72,23 +78,26 @@ const validateInput = (code: string, fileName: string): void => {
   );
 
   if (hasSuspiciousContent) {
+    // Just log it, don't block it - we're analyzing security after all
     console.warn('Suspicious content detected in code submission');
   }
 };
 
 const checkRateLimit = (clientId: string = 'default'): void => {
   const now = Date.now();
-  const windowStart = now - 60000; // 1 minute window
+  const windowStart = now - 60000; // 1 minute sliding window because math is hard
 
+  // Initialize tracking for new clients
   if (!rateLimitStore.has(clientId)) {
     rateLimitStore.set(clientId, []);
   }
 
   const requests = rateLimitStore.get(clientId)!;
   
-  // Remove old requests outside the window
+  // Clean up old requests because I don't want memory leaks
   const recentRequests = requests.filter(time => time > windowStart);
   
+  // Check if they're being too eager
   if (recentRequests.length >= CONFIG.RATE_LIMIT_PER_MINUTE) {
     throw new SecurityAuditError(
       'Rate limit exceeded. Please wait before making another request.',
@@ -97,40 +106,45 @@ const checkRateLimit = (clientId: string = 'default'): void => {
     );
   }
 
+  // Add this request to the pile
   recentRequests.push(now);
   rateLimitStore.set(clientId, recentRequests);
 };
 
 const getCacheKey = (code: string, fileName: string): string => {
-  // Simple hash function for caching
+  // World's simplest hash function - don't @ me, it works
   let hash = 0;
   const str = code + fileName;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
+    hash = hash & hash; // Convert to 32-bit integer because JavaScript
   }
   return hash.toString();
 };
 
 const getFromCache = (cacheKey: string): ScanResult | null => {
   const cached = cacheStore.get(cacheKey);
+  // Check if cache exists and isn't stale
   if (cached && (Date.now() - cached.timestamp) < CONFIG.CACHE_TTL_MS) {
     return cached.result;
   }
+  // Clean up expired cache entries like a responsible developer
   if (cached) {
-    cacheStore.delete(cacheKey); // Remove expired cache
+    cacheStore.delete(cacheKey);
   }
   return null;
 };
 
 const setCache = (cacheKey: string, result: ScanResult): void => {
+  // Store result with timestamp so we know when it goes bad
   cacheStore.set(cacheKey, {
     result,
     timestamp: Date.now()
   });
 };
 
+// Enhanced schema with better validation because the AI sometimes gets creative
 const enhancedVulnerabilitySchema = {
   type: Type.OBJECT,
   properties: {
@@ -138,12 +152,12 @@ const enhancedVulnerabilitySchema = {
       type: Type.INTEGER, 
       description: "Overall security score 0-100.",
       minimum: 0,
-      maximum: 100
+      maximum: 100 // Keep it between 0-100 or I'll lose my mind
     },
     summary: { 
       type: Type.STRING, 
       description: "Executive summary of the audit (max 500 chars).",
-      maxLength: 500
+      maxLength: 500 // Because nobody reads long summaries anyway
     },
     scanMetadata: {
       type: Type.OBJECT,
@@ -160,15 +174,15 @@ const enhancedVulnerabilitySchema = {
         properties: {
           name: { type: Type.STRING, maxLength: 100 },
           severity: { type: Type.STRING, enum: ["Critical", "High", "Medium", "Low"] },
-          lineStart: { type: Type.INTEGER, minimum: 1 },
+          lineStart: { type: Type.INTEGER, minimum: 1 }, // Lines start at 1, not 0, fight me
           lineEnd: { type: Type.INTEGER, minimum: 1 },
           description: { type: Type.STRING, maxLength: 1000 },
           risk: { type: Type.STRING, maxLength: 500 },
           attackScenario: { type: Type.STRING, maxLength: 1000 },
           fix: { type: Type.STRING, maxLength: 2000 },
           confidence: { type: Type.INTEGER, minimum: 0, maximum: 100 },
-          cweId: { type: Type.STRING }, // Common Weakness Enumeration ID
-          owaspCategory: { type: Type.STRING }
+          cweId: { type: Type.STRING }, // Common Weakness Enumeration for the nerds
+          owaspCategory: { type: Type.STRING } // OWASP category because standards matter
         },
         required: ["name", "severity", "lineStart", "lineEnd", "description", "risk", "attackScenario", "fix", "confidence"]
       }
@@ -185,25 +199,26 @@ export const scanCodeWithGemini = async (
   const startTime = Date.now();
   
   try {
-    // Input validation
+    // Run all the boring validation stuff first
     validateInput(code, fileName);
     
-    // Rate limiting
+    // Check if this user is being too eager
     checkRateLimit(options.clientId);
     
-    // Check cache first
+    // Maybe we already analyzed this exact code (because developers copy-paste a lot)
     if (!options.skipCache) {
       const cacheKey = getCacheKey(code, fileName);
       const cached = getFromCache(cacheKey);
       if (cached) {
         console.log('Returning cached result for', fileName);
-        return cached;
+        return cached; // Saved some API calls and my sanity
       }
     }
 
     const apiKey = getApiKey();
     const ai = new GoogleGenAI({ apiKey });
 
+    // The magic prompt that makes Gemini pretend to be a security expert
     const enhancedSystemInstruction = `
       You are the "SecureCode AI Deep Audit Engine v3.0". You use a formal 4-pass algorithm for every file:
       
@@ -237,6 +252,7 @@ export const scanCodeWithGemini = async (
     CODE:
     ${code}`;
 
+    // Race the AI against a timeout because sometimes it just... thinks forever
     const response = await Promise.race([
       ai.models.generateContent({
         model: 'gemini-3-pro-preview',
@@ -245,7 +261,7 @@ export const scanCodeWithGemini = async (
           systemInstruction: enhancedSystemInstruction,
           responseMimeType: "application/json",
           responseSchema: enhancedVulnerabilitySchema,
-          thinkingConfig: { thinkingBudget: 32768 }
+          thinkingConfig: { thinkingBudget: 32768 } // Give it lots of thinking tokens
         }
       }),
       new Promise((_, reject) => 
@@ -258,7 +274,7 @@ export const scanCodeWithGemini = async (
 
     const parsed = JSON.parse((response as any).text || "{}");
     
-    // Validate response structure
+    // Sanity check the AI's response because it sometimes gets creative
     if (typeof parsed.score !== 'number' || parsed.score < 0 || parsed.score > 100) {
       throw new SecurityAuditError(
         'Invalid score in AI response',
@@ -274,12 +290,12 @@ export const scanCodeWithGemini = async (
       timestamp: new Date().toISOString(),
       vulnerabilities: (parsed.vulnerabilities || []).map((v: any, i: number) => ({
         ...v,
-        id: `vuln-${i}-${Date.now()}`,
+        id: `vuln-${i}-${Date.now()}`, // Unique ID because everything needs an ID
         severity: v.severity as Severity
       }))
     };
 
-    // Cache the result
+    // Cache this result for future lazy developers
     if (!options.skipCache) {
       const cacheKey = getCacheKey(code, fileName);
       setCache(cacheKey, result);
@@ -289,13 +305,14 @@ export const scanCodeWithGemini = async (
     return result;
 
   } catch (error) {
+    // Handle our custom errors gracefully
     if (error instanceof SecurityAuditError) {
       throw error;
     }
 
     console.error("Scan Error:", error);
     
-    // Provide more specific error messages
+    // Try to make sense of what went wrong
     if (error instanceof SyntaxError) {
       throw new SecurityAuditError(
         'Failed to parse AI response',
@@ -304,6 +321,7 @@ export const scanCodeWithGemini = async (
       );
     }
 
+    // Handle common API errors that I've seen a million times
     if ((error as any)?.status === 429) {
       throw new SecurityAuditError(
         'API rate limit exceeded. Please try again later.',
@@ -318,6 +336,7 @@ export const scanCodeWithGemini = async (
       );
     }
 
+    // Generic fallback for when everything goes wrong
     throw new SecurityAuditError(
       'Audit engine failure. Please try again.',
       'UNKNOWN_ERROR',
@@ -332,8 +351,10 @@ export const fixCodeWithGemini = async (
   vulnerabilities: Vulnerability[]
 ): Promise<string> => {
   try {
+    // Same validation dance as before
     validateInput(code, fileName);
     
+    // Can't fix nothing, genius
     if (!vulnerabilities || vulnerabilities.length === 0) {
       throw new SecurityAuditError(
         'No vulnerabilities provided for fixing',
@@ -344,10 +365,12 @@ export const fixCodeWithGemini = async (
     const apiKey = getApiKey();
     const ai = new GoogleGenAI({ apiKey });
 
+    // Format the vulnerabilities in a way the AI can understand
     const vulnSummary = vulnerabilities.map(v => 
       `- [${v.severity}] ${v.name} (Lines ${v.lineStart}-${v.lineEnd}): ${v.description}`
     ).join('\n');
 
+    // Prompt the AI to be a security architect (and not break my code)
     const enhancedSystemInstruction = `
       You are a Senior Security Architect with expertise in secure coding practices.
       
@@ -381,6 +404,7 @@ export const fixCodeWithGemini = async (
       Please provide the secure, remediated version of this code.
     `;
 
+    // Another timeout race because AI can get stuck thinking about security
     const response = await Promise.race([
       ai.models.generateContent({
         model: 'gemini-3-pro-preview',
@@ -400,6 +424,7 @@ export const fixCodeWithGemini = async (
 
     let fixed = (response as any).text || "";
     
+    // AI sometimes returns empty responses when it's confused
     if (!fixed.trim()) {
       throw new SecurityAuditError(
         'Empty response from AI',
@@ -407,7 +432,7 @@ export const fixCodeWithGemini = async (
       );
     }
 
-    // Clean up markdown formatting if present
+    // Clean up markdown formatting because AI loves to wrap everything in code blocks
     if (fixed.includes("```")) {
       const codeBlocks = fixed.split("```");
       if (codeBlocks.length >= 3) {
@@ -417,7 +442,7 @@ export const fixCodeWithGemini = async (
 
     const cleanedCode = fixed.trim();
     
-    // Basic validation of the fixed code
+    // Sanity check - if the fix is way shorter, something probably went wrong
     if (cleanedCode.length < code.length * 0.5) {
       throw new SecurityAuditError(
         'Generated fix appears to be incomplete',
@@ -441,7 +466,7 @@ export const fixCodeWithGemini = async (
   }
 };
 
-// Utility function to get audit statistics
+// Utility functions for when I need to debug this mess later
 export const getAuditStats = () => {
   return {
     cacheSize: cacheStore.size,
@@ -450,7 +475,7 @@ export const getAuditStats = () => {
   };
 };
 
-// Utility function to clear caches (for testing/admin)
+// Clear everything when things get weird (usually during testing)
 export const clearCaches = () => {
   cacheStore.clear();
   rateLimitStore.clear();
