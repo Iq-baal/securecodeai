@@ -28,12 +28,14 @@ const SecurityReport: React.FC<Props> = ({ result, onReset }) => {
   const [fixError, setFixError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Color coding because humans love colors to understand numbers
   const getScoreColor = (score: number) => {
-    if (score >= 90) return 'text-cyber-accent';
-    if (score >= 70) return 'text-cyber-warn';
-    return 'text-cyber-danger';
+    if (score >= 90) return 'text-cyber-accent'; // Green for good
+    if (score >= 70) return 'text-cyber-warn';  // Yellow for meh
+    return 'text-cyber-danger'; // Red for "oh no"
   };
 
+  // The magic fix button that may or may not work
   const handleFixCode = async () => {
     setIsFixing(true);
     setFixError(null);
@@ -41,32 +43,36 @@ const SecurityReport: React.FC<Props> = ({ result, onReset }) => {
       const fixed = await fixCodeWithGemini(result.code, result.fileName, result.vulnerabilities);
       setFixedCode(fixed);
     } catch (err: any) {
+      // Sometimes the AI just can't fix things, and that's okay
       setFixError("Failed to generate remediated code. The complexity may exceed auto-fix capabilities.");
     } finally {
       setIsFixing(false);
     }
   };
 
+  // Copy to clipboard because developers love copying code
   const handleCopy = () => {
     if (fixedCode) {
       navigator.clipboard.writeText(fixedCode);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
     }
   };
 
+  // Download the fixed code because some people prefer files
   const handleDownload = () => {
     if (fixedCode) {
       const element = document.createElement("a");
       const file = new Blob([fixedCode], {type: 'text/plain'});
       element.href = URL.createObjectURL(file);
-      element.download = "secure_" + result.fileName;
+      element.download = "secure_" + result.fileName; // Prefix with "secure_" to feel better
       document.body.appendChild(element);
       element.click();
-      document.body.removeChild(element);
+      document.body.removeChild(element); // Clean up after ourselves
     }
   };
 
+  // Count the scary stuff for the summary
   const criticalCount = result.vulnerabilities.filter(v => v.severity === Severity.CRITICAL).length;
   const highCount = result.vulnerabilities.filter(v => v.severity === Severity.HIGH).length;
 

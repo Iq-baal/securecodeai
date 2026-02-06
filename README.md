@@ -1,171 +1,77 @@
-# SecureCode AI - Production Ready
+# SecureCode AI
 
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+AI-powered security auditing platform that detects vulnerabilities and generates fixes using Google's Gemini AI.
 
-A production-ready AI security auditing platform that detects vulnerabilities and generates safe fixes instantly using Google's Gemini AI.
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+
 - Gemini API Key from [Google AI Studio](https://makersuite.google.com/app/apikey)
 
-### Installation
+### Local Development
 
-1. **Clone and install dependencies:**
-   ```bash
-   git clone <repository-url>
-   cd securecode-ai
-   npm install
-   ```
-
-2. **Configure environment:**
-   ```bash
-   cp .env.example .env.local
-   # Edit .env.local and add your GEMINI_API_KEY
-   ```
-
-3. **Run the application:**
-   ```bash
-   npm run dev
-   ```
-
-4. **Validate configuration:**
-   ```bash
-   npm run validate:config
-   ```
-
-## 🏭 Production Deployment
-
-### Build for Production
 ```bash
-npm run build
-npm run preview  # Test production build locally
+# Install dependencies
+npm install
+
+# Create .env.local and add your API key
+echo "VITE_GEMINI_API_KEY=your_key_here" > .env.local
+
+# Start dev server
+npm run dev
 ```
 
-### Environment Variables
-```bash
-GEMINI_API_KEY=your_production_api_key
-NODE_ENV=production
-```
+Visit http://localhost:3000
 
-### Production Features
-- ✅ **Input Validation**: Code size limits, content validation
-- ✅ **Rate Limiting**: 10 requests/minute per client
-- ✅ **Caching**: 5-minute TTL for duplicate scans
-- ✅ **Error Handling**: Comprehensive error types and messages
-- ✅ **Security**: API key validation, timeout protection
-- ✅ **Monitoring**: Real-time system status dashboard
+## Deploy to Vercel
 
-### Testing
-```bash
-npm run test:prod   # Run production validation tests
-npm run test:perf   # Run performance benchmarks
-```
+1. Push your code to GitHub
+2. Go to [vercel.com](https://vercel.com) and import your repo
+3. Add environment variable:
+   - Name: `VITE_GEMINI_API_KEY`
+   - Value: Your Gemini API key
+4. Deploy
 
-## 🔧 Configuration
+That's it. Vercel handles the build automatically.
 
-The application includes production-ready defaults that can be customized:
+## Features
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| Max Code Size | 50KB | Maximum file size for analysis |
-| Rate Limit | 10/min | Requests per minute per client |
-| Cache TTL | 5 min | How long to cache results |
-| Timeout | 30s | Maximum analysis time |
+- **Multi-language Support**: JS, TS, Python, Java, C++, Go, Ruby, Solidity
+- **Real-time Scanning**: Instant vulnerability detection
+- **Auto-fix**: AI-powered code remediation
+- **Scan History**: Track previous audits (stored locally)
+- **Secure Examples**: Reference library of secure patterns
 
-## 📊 Monitoring
+## Tech Stack
 
-Access the system status dashboard via the activity icon in the bottom-right corner:
-- Cache usage statistics
-- Rate limiting status  
-- Configuration overview
-- Service health status
+- React 19 + TypeScript
+- Vite (build tool)
+- Google Gemini AI
+- Tailwind CSS
+- LocalStorage (no backend needed)
 
-## 🛡️ Security Features
+## Security Analysis
 
-### Input Validation
-- File size limits (50KB default)
-- Content validation and sanitization
-- Malicious pattern detection
+Uses a 4-pass algorithm:
+1. AST & Scope Mapping
+2. Source-to-Sink Dataflow Analysis
+3. OWASP/SANS Rule Validation
+4. False Positive Filtering
 
-### Rate Limiting
-- Per-client request throttling
-- Configurable limits
-- Graceful error handling
+Scores range from 0-100 (100 = secure, 0 = critical issues)
 
-### API Security
-- Secure API key handling
-- Request timeout protection
-- Error message sanitization
+## Configuration
 
-## 🎯 Supported Languages
+Default limits (can be adjusted in `services/geminiService.ts`):
+- Max code size: 50KB
+- Rate limit: 10 requests/minute
+- Cache TTL: 5 minutes
+- Timeout: 30 seconds
 
-- JavaScript/TypeScript
-- Python
-- Java
-- C++
-- Go
-- Ruby
-- Solidity
+## Supported Languages
 
-## 📈 Performance
+JavaScript, TypeScript, Python, Java, C++, Go, Ruby, Solidity
 
-- **Average Response Time**: < 10 seconds
-- **Cache Hit Rate**: > 20% for repeated scans
-- **Concurrent Users**: Scales with rate limiting
-- **Memory Usage**: Optimized with TTL-based caching
+## License
 
-## 🔍 Algorithm
-
-The security analysis uses a formal 4-pass algorithm:
-
-1. **AST & Scope Mapping**: Identify variables, functions, and dependencies
-2. **Source-to-Sink Dataflow**: Trace untrusted inputs to sensitive operations
-3. **Rule Validation**: Apply OWASP Top 10 and SANS 25 security rules
-4. **False Positive Filter**: Remove non-exploitable findings
-
-## 📚 Documentation
-
-- [Production Deployment Guide](./PRODUCTION_DEPLOYMENT.md)
-- [API Documentation](./docs/api.md) *(coming soon)*
-- [Security Best Practices](./docs/security.md) *(coming soon)*
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Run tests: `npm run test:prod`
-4. Submit a pull request
-
-## 📄 License
-
-Open Source - See LICENSE file for details
-
-## 🆘 Support
-
-### Common Issues
-
-**"API key not configured"**
-- Set `GEMINI_API_KEY` in your `.env.local` file
-- Verify the key starts with "AI"
-
-**"Rate limit exceeded"**
-- Wait 1 minute between request bursts
-- Normal behavior for high usage
-
-**"Analysis timeout"**
-- File may be too large (>50KB)
-- Try breaking into smaller files
-
-### Getting Help
-
-- Check the [Production Deployment Guide](./PRODUCTION_DEPLOYMENT.md)
-- Review system status dashboard for diagnostics
-- Run `npm run validate:config` to check configuration
-
----
-
-**View your app in AI Studio**: https://ai.studio/apps/drive/1gEg5T11Fg85a4chm-8L3zldBuwxhzUwi
+Open Source

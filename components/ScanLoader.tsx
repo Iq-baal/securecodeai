@@ -3,6 +3,7 @@ import { Loader2, ShieldCheck, Database, Search, Zap } from 'lucide-react';
 
 const ScanLoader: React.FC = () => {
   const [phase, setPhase] = useState(0);
+  // Four phases to make it look like we're doing something sophisticated
   const phases = [
     { name: "Mapping AST & Logic Scopes", icon: <Zap className="w-4 h-4" /> },
     { name: "Tracing Source-to-Sink Dataflow", icon: <Database className="w-4 h-4" /> },
@@ -11,6 +12,7 @@ const ScanLoader: React.FC = () => {
   ];
 
   useEffect(() => {
+    // Cycle through phases every 2.5 seconds for that authentic analysis feel
     const interval = setInterval(() => {
       setPhase(p => (p + 1) % phases.length);
     }, 2500);

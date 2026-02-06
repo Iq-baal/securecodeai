@@ -5,8 +5,10 @@ import { Book, Code, Shield } from 'lucide-react';
 const SecureExamplesLibrary: React.FC = () => {
   const [activeLang, setActiveLang] = useState<string>('All');
   
+  // Extract unique languages dynamically so I don't have to update this when adding examples
   const languages = ['All', ...Array.from(new Set(secureExamples.map(e => e.language)))];
   
+  // Filter by language or show everything
   const filteredExamples = activeLang === 'All' 
     ? secureExamples 
     : secureExamples.filter(e => e.language === activeLang);
